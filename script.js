@@ -161,14 +161,17 @@ if (form) {
     if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
 
     const record = {
-     "timestamp": new Date().toLocaleString("th-TH"),
+     "timestamps": new Date().toLocaleString("th-TH"),
      "ชื่อต้นไม้(ไทย)*": f.get("name"),
      "ชื่อวิทยาศาสตร์": f.get("sci"),
      "ประเภท*": f.get("type"),           
      "บริเวณที่พบ*": f.get("zone"),       
-     "ความสูงโดยประมาณ (เมตร) *": f.get("height"),  
-     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *": f.get("girth"), 
-     "สุขภาพต้นไม้ *": selectedHealth,    
+     "ความสูงโดยประมาณ (เมตร)*": f.get("height"),  
+     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.)*": f.get("girth"),
+     "dbh(เส้นผ่านศูนย์กลางเพียงอก)": dbh(+f.get("girth")).toFixed(1), 
+     "มวลชีวภาพ": bio(+f.get("girth"), +f.get("height")).toFixed(1),
+     "co2": co2(+f.get("girth"), +f.get("height")).toFixed(1),
+     "สุขภาพต้นไม้*": selectedHealth,    
      "ผู้สำรวจ*": f.get("surveyor"),     
      "บันทึกเพิ่มเติม": f.get("note")
     };

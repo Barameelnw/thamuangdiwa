@@ -172,10 +172,16 @@ if (form) {
     if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
 
     const record = {
-      "timestamp": new Date().toLocaleString("th-TH"),
-      "ชื่อต้นไม้(ไทย)*": f.get("name"), "ชื่อวิทยาศาสตร์": f.get("sci"), "ประเภท": f.get("type"),
-      "บริเวณ": f.get("zone"), "ความสูง": f.get("height"), "เส้นรอบวง": f.get("girth"),
-      "สุขภาพ": selectedHealth, "ผู้สำรวจ": f.get("surveyor"), "บันทึกเพิ่มเติม": f.get("note")
+     "timestamp": new Date().toLocaleString("th-TH"),
+     "ชื่อต้นไม้(ไทย)*": f.get("name"),
+     "ชื่อวิทยาศาสตร์": f.get("sci"),
+     "ประเภท*": f.get("type"),           
+     "บริเวณที่พบ*": f.get("zone"),       
+     "ความสูงโดยประมาณ (เมตร) *": f.get("height"),  
+     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *": f.get("girth"), 
+     "สุขภาพต้นไม้ *": selectedHealth,    
+     "ผู้สำรวจ*": f.get("surveyor"),     
+     "บันทึกเพิ่มเติม": f.get("note")
     };
 
     const submitBtn = form.querySelector('button[type="submit"]');

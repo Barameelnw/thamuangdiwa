@@ -212,3 +212,85 @@ document.querySelectorAll('a[href^="#"]').forEach(a=>{
 /* ===== เริ่มทำงาน ===== */
 function refresh(){ renderStats(); renderTrees(); renderMap(); renderDash(); }
 refresh();
+// =========================================================
+// 🚀 ระบบส่งข้อมูลฟอร์มต้นไม้ไปที่ Google Sheets (SheetDB)
+// =========================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const treeForm = document.getElementById("treeForm");
+
+  if (treeForm) {
+    treeForm.addEventListener("submit", function (event) {
+      event.preventDefault(); // ป้องกันไม่ให้หน้าเว็บรีเฟรชเอง
+
+      // 1. ดึงข้อมูลจากช่องกรอกทั้งหมดในฟอร์มโดยใช้ FormData
+      const formData = new FormData(treeForm);
+
+      // แปลงค่าสุขภาพต้นไม้ให้อ่านง่ายก่อนลง Google Sheets
+      let healthText = "";
+      const healthValue = formData.get("health");
+      if (healthValue === "good") healthText = "สมบูรณ์ดี";
+      else if (healthValue === "fair") healthText = "ต้องเฝ้าระวัง";
+      else if (healthValue === "bad") healthText = "ต้องดูแลด่วน";
+
+      // 2. แพ็กข้อมูลเป็นก้อน Object (ตรงนี้ต้องตั้งชื่อฝั่งซ้ายให้ตรงกับหัวตาราง Google Sheets ของคุณเป๊ะๆ)
+      const treeData = {
+        "timestamp": new Date().toLocaleString("th-TH"), // สร้างวันเวลาไทยอัตโนมัติ
+        "ชื่อต้นไม้(ไทย)*": formData.get("name"),
+        "ชื่อวิทยาศาสตร์": formData.get("sci"),
+        "ประเภท": formData.get("type"),
+        "บริเวณ": formData.get("zone"),
+        "ความสูง": formData.get("height"),
+        "เส้นรอบวง": formData.get("girth"),
+        "สุขภาพ": healthText,
+        "ผู้สำรวจ": formData.get("surveyor"),
+        "บันทึกเพิ่มเติม": formData.get("note")
+      };
+
+      // 3. ใช้ fetch ส่งข้อมูล (POST) ไปยัง SheetDB
+      // ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ให้เป็น API URL ที่ได้มาจากเว็บ SheetDB ของคุณจริงๆ นะครับ
+      const sheetDbUrl = "https://sheetdb.io/api/v1/m7x855pegxfiw";
+
+      // แสดงสถานะกำลังบันทึกบนปุ่มชั่วคราว
+      const submitBtn = treeForm.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "⏳ กำลังบันทึกข้อมูล...";
+
+      fetch(sheetDbUrl, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          data: [treeData]
+        })
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("ระบบฐานข้อมูลตอบกลับผิดพลาด");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          alert("🎉 บันทึกผลสำรวจต้นไม้โรงเรียนท่าม่วงฯ สำเร็จแล้ว!");
+          treeForm.reset(); // ล้างข้อมูลในฟอร์มเมื่อบันทึกเสร็จ
+
+          // ล้างตัวเลขบนกล่องคำนวณหน้าเว็บให้กลับเป็นค่าเริ่มต้น
+          document.getElementById("cDbh").innerText = "– ซม.";
+          document.getElementById("cBio").innerText = "– กก.";
+          document.getElementById("cCo2").innerText = "– กก.";
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("❌ เกิดข้อผิดพลาด ไม่สามารถส่งข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+        })
+        .finally(() => {
+          // คืนค่าปุ่มให้กดใหม่ได้ตามปกติ
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        });
+    });
+  }
+});

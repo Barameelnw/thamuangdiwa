@@ -1,22 +1,5 @@
 /* ===== ข้อมูลต้นไม้ตั้งต้น (แก้ให้ตรงกับโรงเรียนได้เลย) ===== */
-const SEED = [
-  {code:"TMR-001",name:"จามจุรี",sci:"Samanea saman",type:"ไม้ยืนต้น",zone:"หน้าเสาธง",
-   height:14,girth:210,health:"good",surveyor:"ทีมสำรวจ ม.5/1",note:"ต้นไม้ประจำโรงเรียน ให้ร่มเงากว้าง",x:48,y:52,icon:"🌳"},
-  {code:"TMR-002",name:"ประดู่",sci:"Pterocarpus indicus",type:"ไม้ดอก",zone:"อาคารเรียน 1",
-   height:11,girth:150,health:"good",surveyor:"ทีมสำรวจ ม.5/1",note:"ออกดอกเหลืองช่วงเดือนมีนาคม",x:18,y:20,icon:"🌼"},
-  {code:"TMR-003",name:"มะม่วง",sci:"Mangifera indica",type:"ไม้ผล",zone:"โรงอาหาร",
-   height:8,girth:95,health:"fair",surveyor:"ทีมสำรวจ ม.4/2",note:"มีกิ่งแห้งด้านทิศตะวันตก ควรตัดแต่ง",x:16,y:80,icon:"🥭"},
-  {code:"TMR-004",name:"หางนกยูงฝรั่ง",sci:"Delonix regia",type:"ไม้ดอก",zone:"สนามฟุตบอล",
-   height:10,girth:130,health:"good",surveyor:"ทีมสำรวจ ม.4/2",note:"ดอกสีแดงส้มช่วงปิดเทอม",x:72,y:22,icon:"🌺"},
-  {code:"TMR-005",name:"ก้ามปู",sci:"Albizia saman",type:"ไม้ยืนต้น",zone:"สนามฟุตบอล",
-   height:13,girth:185,health:"fair",surveyor:"ทีมสำรวจ ม.6/1",note:"กิ่งยื่นเข้าใกล้สายไฟ",x:82,y:35,icon:"🌳"},
-  {code:"TMR-006",name:"ตีนเป็ดน้ำ",sci:"Cerbera odollam",type:"ไม้ยืนต้น",zone:"สวนหย่อม",
-   height:6,girth:60,health:"bad",surveyor:"ทีมสำรวจ ม.6/1",note:"ลำต้นเอียง มีโพรงที่โคนต้น ควรตรวจโดยรุกขกร",x:80,y:80,icon:"🌿"},
-  {code:"TMR-007",name:"ชมพูพันธุ์ทิพย์",sci:"Tabebuia rosea",type:"ไม้ดอก",zone:"สวนหย่อม",
-   height:7,girth:72,health:"good",surveyor:"ทีมสำรวจ ม.3/3",note:"จุดถ่ายรูปยอดนิยมช่วงดอกบาน",x:88,y:70,icon:"🌸"},
-  {code:"TMR-008",name:"เข็มแดง",sci:"Ixora coccinea",type:"ไม้พุ่ม",zone:"อาคารเรียน 1",
-   height:1.5,girth:14,health:"good",surveyor:"ทีมสำรวจ ม.3/3",note:"แนวรั้วหน้าอาคาร ดึงดูดผีเสื้อ",x:30,y:30,icon:"🌷"}
-];
+const SEED = [];
 
 const KEY = "tmr_urbanforest_v1";
 let trees = load();

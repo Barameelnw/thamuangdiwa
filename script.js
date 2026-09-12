@@ -22,35 +22,54 @@ function refresh() {
   renderDash();
 }
 
-/* ===== 🔄 โหลดข้อมูลจริงจาก Google Sheets ===== */
+/* ===== 🔄 โหลดข้อมูลจริงจาก Google Sheets กลับมาแสดงบนหน้าเว็บ ===== */
 function loadTreeData() {
   fetch(SHEETDB_URL)
-    .then(res => res.json())
+    .then(response => {
+      if (!response.ok) throw new Error("ดึงข้อมูลจาก API ไม่สำเร็จ");
+      return response.json();
+    })
     .then(data => {
       if (Array.isArray(data)) {
+        // แปลงข้อมูลแถวตารางจาก Google Sheets ให้เข้าล็อกโครงสร้างของหน้าเว็บ
         trees = data.map((item, index) => {
-          const healthKey = HEALTH_EN[item["สุขภาพ"]] || "good";
-          const treeType = item["ประเภท"] || "ไม้ยืนต้น";
+          // 1. ดักจับและแปลงค่าสุขภาพกลับเป็นคีย์ภาษาอังกฤษสำหรับ CSS โค้ดเดิม
+          let healthKey = "good";
+          const hValue = item["สุขภาพต้นไม้ *"] || item["สุขภาพ"] || "";
+          if (hValue.includes("เฝ้าระวัง")) healthKey = "fair";
+          if (hValue.includes("ด่วน") || hValue.includes("ผุ")) healthKey = "bad";
+
+          const treeType = item["ประเภท *"] || item["ประเภท"] || "ไม้ยืนต้น";
+          
+          // 2. ดึงค่าชื่อต้นไม้ (ถ้าไม่มีให้ใช้คำแก้ขัดเพื่อไม่ให้การ์ดขาวโพลน)
+          const treeName = item["ชื่อต้นไม้(ไทย) *"] || item["ชื่อต้นไม้"] || "ไม่ระบุชื่อ";
+
           return {
+            // รันรหัสต้นไม้ TMR-001, TMR-002 ตามลำดับแถวอัตโนมัติ
             code: `TMR-${String(index + 1).padStart(3, "0")}`, 
-            name: item["ชื่อต้นไม้(ไทย)*"] || "ไม่ระบุชื่อ",
+            name: treeName,
             sci: item["ชื่อวิทยาศาสตร์"] || "-",
             type: treeType,
-            zone: item["บริเวณ"] || "สวนหย่อม",
-            height: parseFloat(item["ความสูง"]) || 0,
-            girth: parseFloat(item["เส้นรอบวง"]) || 0,
+            zone: item["บริเวณที่พบ *"] || item["บริเวณ"] || "ไม่ระบุบริเวณ",
+            
+            // 3. ดึงค่าตัวเลขความสูงและเส้นรอบวง แปลงจากข้อความให้เป็นตัวเลขทศนิยม
+            height: parseFloat(item["ความสูงโดยประมาณ (เมตร) *"] || item["ความสูง"]) || 0, 
+            girth: parseFloat(item["เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *"] || item["เส้นรอบวง"]) || 0, 
+            
             health: healthKey,
-            surveyor: item["ผู้สำรวจ"] || "ไม่ระบุนาม",
+            surveyor: item["ผู้สำรวจ *"] || item["ผู้สำรวจ"] || "ไม่ระบุนาม",
             note: item["บันทึกเพิ่มเติม"] || "-",
-            x: 15 + ((item["ชื่อต้นไม้(ไทย)*"] || "").charCodeAt(0) % 70),
-            y: 15 + ((item["บริเวณ"] || "").charCodeAt(0) % 70),
             icon: ICONS[treeType] || "🌳"
           };
         });
-        refresh(); 
+        
+        console.log("🔄 ซิงค์ข้อมูลคลาวด์กลับเข้าหน้าเว็บสำเร็จ จำนวน:", trees.length);
+        refresh(); // 💡 สั่งรันคำสั่งวาดการ์ด วาดสถิติ และกราฟสรุปผลใหม่ทันทีด้วยข้อมูลจริง!
       }
     })
-    .catch(err => console.error("โหลดข้อมูลล้มเหลว:", err));
+    .catch(error => {
+      console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลกลับหน้าเว็บ:", error);
+    });
 }
 
 /* ===== สถิติ Hero ===== */
@@ -162,17 +181,17 @@ if (form) {
 
     const record = {
      "timestamps": new Date().toLocaleString("th-TH"),
-     "ชื่อต้นไม้(ไทย)*": f.get("name"),
+     "ชื่อต้นไม้(ไทย) *": f.get("name"),
      "ชื่อวิทยาศาสตร์": f.get("sci"),
-     "ประเภท*": f.get("type"),           
-     "บริเวณที่พบ*": f.get("zone"),       
-     "ความสูงโดยประมาณ (เมตร)*": f.get("height"),  
-     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.)*": f.get("girth"),
+     "ประเภท *": f.get("type"),           
+     "บริเวณที่พบ *": f.get("zone"),       
+     "ความสูงโดยประมาณ (เมตร) *": f.get("height"),  
+     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *": f.get("girth"),
      "dbh(เส้นผ่านศูนย์กลางเพียงอก)": dbh(+f.get("girth")).toFixed(1), 
      "มวลชีวภาพ": bio(+f.get("girth"), +f.get("height")).toFixed(1),
      "co2": co2(+f.get("girth"), +f.get("height")).toFixed(1),
-     "สุขภาพต้นไม้*": selectedHealth,    
-     "ผู้สำรวจ*": f.get("surveyor"),     
+     "สุขภาพต้นไม้ *": selectedHealth,    
+     "ผู้สำรวจ *": f.get("surveyor"),     
      "บันทึกเพิ่มเติม": f.get("note")
     };
 

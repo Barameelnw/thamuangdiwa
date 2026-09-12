@@ -1,4 +1,1 @@
-git rm CNAME
-git commit -m "remove CNAME"
-git push
 

@@ -18,7 +18,7 @@ const ICONS = {"ไม้ยืนต้น":"🌳","ไม้ดอก":"🌸",
 function refresh() {
   renderStats();
   renderTrees();
-  renderMap();
+  //renderMap();
   renderDash();
 }
 
@@ -101,17 +101,6 @@ function renderTrees(){
     </article>`).join("") : `<p style="grid-column:1/-1;text-align:center;color:#889;padding:40px 0">😢 ไม่พบข้อมูล</p>`;
 
   grid.querySelectorAll(".tree-card").forEach(c=> c.onclick = ()=> openModal(c.dataset.code));
-}
-
-/* ===== แผนที่ ===== */
-function renderMap(){
-  const canvas = document.getElementById("mapCanvas"); if (!canvas) return;
-  canvas.querySelectorAll(".pin").forEach(p=>p.remove());
-  trees.forEach(t=>{
-    const p = document.createElement("div"); p.className = `pin ${t.health}`;
-    p.style.left = (t.x ?? 50) + "%"; p.style.top = (t.y ?? 50) + "%";
-    p.title = `${t.code} ${t.name}`; p.onclick = ()=> openModal(t.code); canvas.appendChild(p);
-  });
 }
 
 /* ===== Modal หน้าต่างป๊อปอัป ===== */

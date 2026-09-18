@@ -198,6 +198,8 @@ if (form) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const oldText = submitBtn.innerHTML; submitBtn.disabled = true; submitBtn.innerHTML = "⏳ กำลังบันทึก...";
 
+    data.images = JSON.stringify(treeImages);
+
     fetch(SHEETDB_URL, {
       method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" },
       body: JSON.stringify({ data: [record] })
@@ -205,6 +207,9 @@ if (form) {
     .then(res => { if (!res.ok) throw new Error(); return res.json(); })
     .then(() => {
       alert(`🎉 บันทึกข้อมูลสำเร็จแล้ว!`); form.reset();
+      treeImages = [];
+renderPreview();
+
       ["cDbh","cBio","cCo2"].forEach(id => document.getElementById(id).textContent="– กก.");
       loadTreeData(); // รีโหลดเพื่อดึงข้อมูลใหม่มาโชว์ทันที
     })
@@ -232,6 +237,60 @@ if (document.getElementById("btnReset")) {
     document.getElementById("searchBox").value = ""; document.getElementById("filterType").selectedIndex = 0; document.getElementById("filterHealth").selectedIndex = 0; renderTrees();
   };
 }
+
+/* ============ ระบบอัปโหลดรูปภาพ ============ */
+let treeImages = [];
+const fileInput = document.getElementById('fileInput');
+const uploadBox = document.getElementById('uploadBox');
+const previewContainer = document.getElementById('previewContainer');
+
+if (uploadBox) {
+  uploadBox.addEventListener('click', () => fileInput.click());
+  ['dragover','dragleave','drop'].forEach(ev =>
+    uploadBox.addEventListener(ev, e => {
+      e.preventDefault();
+      uploadBox.classList.toggle('dragover', ev === 'dragover');
+      if (ev === 'drop') handleFiles(e.dataTransfer.files);
+    })
+  );
+  fileInput.addEventListener('change', e => handleFiles(e.target.files));
+}
+
+function handleFiles(files){
+  [...files].forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    resizeImage(file, 400, 0.4).then(url => { treeImages.push(url); renderPreview(); });
+  });
+  fileInput.value = '';
+}
+
+function resizeImage(file, maxSize, quality){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = img.width * scale; c.height = img.height * scale;
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPreview(){
+  previewContainer.innerHTML = treeImages.map((src, i) => `
+    <div class="preview-item">
+      <img src="${src}" alt="รูปต้นไม้ ${i+1}">
+      <button type="button" onclick="removeImage(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeImage(i){ treeImages.splice(i, 1); renderPreview(); }
 
 // เริ่มต้นระบบดึงข้อมูลทันทีเมื่อเปิดหน้าเว็บ
 document.addEventListener("DOMContentLoaded", loadTreeData);

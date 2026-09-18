@@ -121,6 +121,21 @@ img{max-width:100%}
 .form-btn{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .form-btn .btn{background:var(--green);color:#fff}
 .form-btn .btn.ghost{background:transparent;color:var(--green);border:2px solid var(--green)}
+.upload-label{display:block;margin-top:14px}
+.image-upload-box{
+  border:2px dashed #cfd8cf;border-radius:12px;padding:22px;
+  text-align:center;cursor:pointer;transition:.2s;background:#fafdfa;
+}
+.image-upload-box:hover,.image-upload-box.dragover{border-color:#2e7d32;background:#f0f7f0}
+.image-upload-box p{margin:0;color:#555;font-size:1.05rem}
+.image-upload-box small{color:#888}
+.preview-container{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.preview-item{position:relative;width:110px;height:110px;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.preview-item img{width:100%;height:100%;object-fit:cover;display:block}
+.preview-item button{
+  position:absolute;top:4px;right:4px;border:0;border-radius:50%;
+  width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:1
+}
 
 /* DASHBOARD */
 .dash{display:grid;grid-template-columns:1fr 1fr;gap:20px}

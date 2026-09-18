@@ -125,10 +125,20 @@
       </label>
       <label>ผู้สำรวจ *<input name="surveyor" required placeholder="ชื่อ-สกุล / ชั้น ม."></label>
     </div>
+    
     <label>บันทึกเพิ่มเติม
       <textarea name="note" rows="3" placeholder="เช่น มีรังนก มีเถาวัลย์พัน กิ่งยื่นทับสายไฟ"></textarea>
     </label>
 
+    <label class="upload-label">รูปภาพต้นไม้ (เลือกได้หลายรูป)
+  <div class="image-upload-box" id="uploadBox">
+    <p>📸 คลิกที่นี่เพื่อเลือกรูปภาพ</p>
+    <small>รองรับ JPG / PNG — ระบบจะย่อขนาดให้อัตโนมัติ</small>
+  </div>
+</label>
+<input type="file" id="fileInput" name="treeImages" accept="image/*" multiple hidden>
+<div class="preview-container" id="previewContainer"></div>
+    
     <div class="calc" id="calcBox">
       <div><span>DBH (เส้นผ่านศูนย์กลาง)</span><b id="cDbh">– ซม.</b></div>
       <div><span>มวลชีวภาพประมาณ</span><b id="cBio">– กก.</b></div>

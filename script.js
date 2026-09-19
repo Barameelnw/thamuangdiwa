@@ -2,10 +2,10 @@
 // 🌳 ส่วนที่ 1: ระบบจัดการข้อมูลคลาวด์และแสดงผล
 // =========================================================
 
-// ⚠️ ลิงก์ดึงข้อมูลตารางกลับมาแสดงบนหน้าเว็บ (คงเดิมไว้)
-const SHEETDB_URL = "https://sheetdb.io";
+// 💡 แก้ไขบั๊กตัวสะกดคืนลิงก์ดึงข้อมูลจริงกลับมาแสดงพรีวิวบนหน้าเว็บ
+const SHEETDB_URL = "https://sheetdb.io/api/v1/m7x855pegxfiw";
 
-// ⚠️ เปลี่ยนลิงก์ด้านล่างให้เป็น Web App URL ที่ได้จากการ Deploy ใน Google Apps Script ของคุณนะครับ
+// ⚠️ เว็บแอป URL ของ Google Apps Script (ตรวจสอบและใช้ลิงก์ปัจจุบันของคุณ)
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlbBqIkNleNEw_BHYL19p1YhUPmzJaxF5u3WTZMtMFP5C3uiu9mPBmYd71j63xD6O_/exec";
 
 let trees = []; 
@@ -34,7 +34,6 @@ function loadTreeData() {
     .then(data => {
       if (Array.isArray(data)) {
         trees = data.map((item, index) => {
-          // แก้ไขบั๊กตัวสะกดชื่อคอลัมน์ให้ดักจับตรงกับหน้าตารางชีตจริง (ไม่มีช่องว่างหน้าเครื่องหมาย *)
           let healthKey = "good";
           const hValue = item["สุขภาพต้นไม้*"] || item["สุขภาพต้นไม้ *"] || item["สุขภาพ"] || "";
           if (hValue.includes("เฝ้าระวัง")) healthKey = "fair";
@@ -163,7 +162,6 @@ const fileInput = document.getElementById("fileInput");
 const uploadBox = document.getElementById("uploadBox");
 
 if (form) {
-  // คำนวณค่า DBH และคาร์บอนแบบพิมพ์ไปขึ้นโชว์ไปอัตโนมัติ
   form.addEventListener("input", ()=>{
     const g = +form.girth.value, h = +form.height.value;
     if(g>0 && h>0){
@@ -178,25 +176,20 @@ if (form) {
   });
 }
 
-// ผูกเหตุการณ์เมื่อกดที่กล่องอัปโหลดภาพ ให้ไปเรียกเปิดช่องเลือกไฟล์ของระบบบราวเซอร์
 uploadBox?.addEventListener("click", () => fileInput?.click());
 
-// ✨ ระบบดึงรูปขึ้นพรีวิวตามคลาสแผ่นการ์ดจริงใน style.css (.preview-item) พร้อมดักจับขนาดไฟล์จริง
 fileInput?.addEventListener("change", () => {
   const previewContainer = document.getElementById("previewContainer");
   if (!previewContainer) return;
   
-  previewContainer.innerHTML = ""; // ล้างค่ารูปพรีวิวเก่าออกก่อนเมื่อมีการเลือกรูปใหม่
+  previewContainer.innerHTML = ""; 
 
   if (fileInput.files.length > 0) {
-    const file = fileInput.files[0]; // ดึงข้อมูลไฟล์รูปหลักตัวแรก
-    
-    // แปลงขนาดไฟล์ภาพดิบจริงจากคอมฯ/มือถือ ให้เป็น Megabytes (MB)
+    const file = fileInput.files[0]; 
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     
     const reader = new FileReader();
     reader.onload = function(e) {
-      // 💡 วาดภาพลงล็อกตามโครงสร้างคลาส (.preview-item) ใน CSS ของคุณ พร้อมแจ้งสเปกขนาดรูปใต้กล่อง
       previewContainer.innerHTML = `
         <div style="width: 100%;">
           <div class="preview-item">
@@ -215,11 +208,10 @@ fileInput?.addEventListener("change", () => {
   }
 });
 
-// ฟังก์ชันเสริมสำหรับปุ่มกากบาท (✕) บนตัวรูปพรีวิวเพื่อล้างรูปที่เลือกทิ้ง
 function clearSelectedImage() {
-  if(fileInput) fileInput.value = ""; // ล้างไฟล์จากอินพุต
+  if(fileInput) fileInput.value = ""; 
   const previewContainer = document.getElementById("previewContainer");
-  if(previewContainer) previewContainer.innerHTML = ""; // ล้างหน้าจอพรีวิว
+  if(previewContainer) previewContainer.innerHTML = ""; 
 }
 
 // =========================================================
@@ -235,19 +227,16 @@ form?.addEventListener("submit", async function(e) {
 
   const f = new FormData(form);
   
-  // แปลงค่ารหัสสุขภาพเป็นข้อความภาษาไทยให้ตรงล็อกหน้าตาราง Google Sheets
   let selectedHealth = "สมบูรณ์ดี";
   if (f.get("health") === "fair") selectedHealth = "ต้องเฝ้าระวัง";
   if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
 
-  // รันสร้างรหัสต้นไม้ใหม่ TMR-รุ่นปี-สุ่มเลข 3 หลัก (คอลัมน์ A)
   const treeNumber = "TMR-" + new Date().getFullYear().toString().slice(-2) + "-" + Math.floor(100 + Math.random() * 900);
 
   const dbhText = document.getElementById("cDbh").textContent.replace(" ซม.", "").trim();
   const bioText = document.getElementById("cBio").textContent.replace(" กก.", "").trim();
   const co2Text = document.getElementById("cCo2").textContent.replace(" กก.", "").trim();
 
-  // ดักจับไฟล์รูปภาพจากหน้าจอ
   const files = fileInput?.files;
   if (!files || files.length === 0) {
     alert("❌ กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึกข้อมูลด้วยครับสหาย!");
@@ -256,9 +245,9 @@ form?.addEventListener("submit", async function(e) {
     return;
   }
 
-  // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
+  // ✨ ดึงไฟล์ภาพแรกสุด [0] เข้ากระบวนการอ่าน Base64
   const reader = new FileReader();
-  reader.readAsDataURL(files[0]);
+  reader.readAsDataURL(files[0]); 
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
@@ -279,9 +268,10 @@ form?.addEventListener("submit", async function(e) {
       ctx.drawImage(img, 0, 0, width, height);
 
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะเนื้อข้อมูล Base64 บริสุทธิ์
+      
+      // ✨ จุดแก้บั๊กสำคัญ: เลือกเฉพาะข้อความ Array ตัวที่ 1 ดึง Base64 บริสุทธิ์ส่งข้ามระบบแก้เอ๋อ Blob
+      const base64String = compressedBase64.split(",")[1]; 
 
-      // ผูก Payload ห่อข้อมูลนำส่งแยก 15 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
         treeNumber: treeNumber,
         treeName: f.get("name") || "",
@@ -296,12 +286,11 @@ form?.addEventListener("submit", async function(e) {
         treeHealth: selectedHealth,
         coordinator: f.get("surveyor") || "",
         note: f.get("note") || "-",
-        imageBase64: base64String,
+        imageBase64: base64String, // ยิงก้อนข้อมูลภาพบริสุทธิ์ส่งไป
         imageType: "image/jpeg"
       };
 
       try {
-        // ยิงข้อมูลจากหน้าเว็บบน GitHub เข้าหา Google Apps Script API หลังบ้าน
         const response = await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           body: JSON.stringify(payload)
@@ -315,7 +304,7 @@ form?.addEventListener("submit", async function(e) {
           const preview = document.getElementById("previewContainer");
           if(preview) preview.innerHTML = "";
           ["cDbh","cBio","cCo2"].forEach(id => document.getElementById(id).textContent="– กก.");
-          loadTreeData(); // รีโหลดแสดงข้อมูลการ์ดแผ่นใหม่ทันทีบนฐานข้อมูลหน้าเว็บ
+          loadTreeData(); 
         } else {
           alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
         }

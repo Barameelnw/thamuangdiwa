@@ -219,43 +219,39 @@ renderPreview();
 }
 
 // เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlbBqIkNleNEw_BHYL19p1YhUPmzJaxF5u3WTZMtMFP5C3uiu9mPBmYd71j63xD6O_/exec";
+// ⚠️ เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets ของคุณ
+const GAS_WEB_APP_URL = "วาง_URL_เว็บแอป_ของ_Google_Apps_Script_ตรงนี้";
 
-async function submitForm() {
-  const btn = document.querySelector("#treeForm button") || document.querySelector(".btn-submit"); 
-  if(btn) btn.innerText = "⏳ กำลังบันทึก...";
+const treeForm = document.getElementById("treeForm");
 
-  // 📌 ดึงข้อมูลจากหน้าเว็บให้ครบทุกช่องตามคอลัมน์ใน Sheet 
-  // (อย่าลืมเปลี่ยนไอดีใน document.getElementById ให้ตรงกับของฟอร์มใน HTML จริงของคุณนะครับสหาย)
-  const payloadData = {
-    treeNumber: document.getElementById("treeNumberInput")?.value || "",     // คอลัมน์ A
-    treeName: document.getElementById("treeNameInput")?.value || "",         // คอลัมน์ B
-    scienceName: document.getElementById("scienceInput")?.value || "",       // คอลัมน์ C
-    treeType: document.getElementById("treeTypeSelect")?.value || "",        // คอลัมน์ D
-    locationFound: document.getElementById("locationInput")?.value || "",    // คอลัมน์ E
-    approxHeight: document.getElementById("heightInput")?.value || "",       // คอลัมน์ F
-    girthSize: document.getElementById("girthInput")?.value || "",           // คอลัมน์ G
-    
-    // ช่องพวกนี้ดึงตัวเลขจากค่าที่คำนวณได้บนหน้าจอ (และลบหน่วยภาษาไทยออก)
-    dbh: document.getElementById("dbh").innerText.replace(" ซม.", "").trim(), // คอลัมน์ H
-    biomass: document.getElementById("biomass").innerText.replace(" กก.", "").trim(), // คอลัมน์ I
-    co2: document.getElementById("co2").innerText.replace(" กก.", "").trim(), // คอลัมน์ J
-    
-    treeHealth: document.getElementById("healthSelect")?.value || "",        // คอลัมน์ K
-    coordinator: document.getElementById("surveyorInput")?.value || "",      // คอลัมน์ L
-    note: document.getElementById("note").value || ""                        // คอลัมน์ M
-  };
+treeForm.addEventListener("submit", async function (e) {
+  e.preventDefault(); // บล็อกไม่ให้หน้าจอโหลดใหม่ตอนกดส่ง
 
-  const fileInput = document.getElementById("imageFile"); // ID ช่องเลือกรูปภาพ
-  const file = fileInput.files[0];
+  const submitBtn = treeForm.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.innerText = "⏳ กำลังบันทึก...";
+
+  // 1. ดึงข้อมูลจากโครงสร้างฟอร์มจริง (ดึงตามคุณสมบัติ name ใน HTML ของคุณ)
+  const formData = new FormData(treeForm);
   
+  // คำนวณรหัสต้นไม้แบบอัตโนมัติตามเวลา หรือปล่อยว่างถ้าคุณจะกรอกเอง (คอลัมน์ A)
+  const treeNumber = "TMR-" + new Date().getFullYear().toString().slice(-2) + "-" + Math.floor(100 + Math.random() * 900);
+
+  // 2. ดึงค่า DBH, มวลชีวภาพ, CO2 ที่ระบบคำนวณและแสดงอยู่บนหน้าจอ (คอลัมน์ H, I, J)
+  const dbhText = document.getElementById("cDbh").innerText.replace(" ซม.", "").trim();
+  const bioText = document.getElementById("cBio").innerText.replace(" กก.", "").trim();
+  const co2Text = document.getElementById("cCo2").innerText.replace(" กก.", "").trim();
+
+  // 3. ดึงไฟล์รูปภาพจากช่องอัปโหลดรูป (id="fileInput")
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0]; // เลือกดึงภาพแรก
+
   if (!file) {
-    alert("กรุณาเลือกรูปภาพก่อนบันทึก!");
-    if(btn) btn.innerText = "บันทึกข้อมูลต้นไม้";
+    alert("กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึก!");
+    if (submitBtn) submitBtn.innerText = "💾 บันทึกข้อมูลต้นไม้";
     return;
   }
 
-  // กระบวนการบีบอัดภาพเพื่อความเร็วสูงสุด
+  // --- เริ่มกระบวนการบีบอัดภาพเพื่อส่งข้อมูลให้ไวภายในไม่กี่วินาที ---
   const reader = new FileReader();
   reader.readAsDataURL(file);
   reader.onload = function (event) {
@@ -263,7 +259,7 @@ async function submitForm() {
     img.src = event.target.result;
     img.onload = async function () {
       const canvas = document.createElement("canvas");
-      const MAX_WIDTH = 1000; 
+      const MAX_WIDTH = 1000; // ล็อกความกว้างไว้ไม่เกิน 1,000px เพื่อย่อขนาดไฟล์ให้เล็กลงมาก ๆ
       let width = img.width;
       let height = img.height;
 
@@ -277,39 +273,56 @@ async function submitForm() {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
+      // บีบอัดความละเอียดภาพเหลือ 75% ไฟล์จะเบาลงจากหลาย MB เหลือหลักร้อย KB รูปยังชัด
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะตัวเนื้อข้อมูล Base64
+      const base64String = compressedBase64.split(",")[1]; // ตัดส่วนหัวเอาเฉพาะตัวรหัส Base64 บริสุทธิ์
 
-      // ประกอบก้อนข้อมูลข้อมูลทั้งหมด + รูปภาพ พร้อมส่ง
+      // 4. มัดรวมก้อนข้อมูลส่งผ่านตัวแปร (Payload) ให้จับคู่เป๊ะๆ ทั้ง 15 คอลัมน์
       const payload = {
-        ...payloadData,
+        treeNumber: treeNumber,                          // คอลัมน์ A (รหัสต้นไม้)
+        treeName: formData.get("name") || "",           // คอลัมน์ B (ชื่อไทย)
+        scienceName: formData.get("sci") || "",         // คอลัมน์ C (ชื่อวิทยาศาสตร์)
+        treeType: formData.get("type") || "",           // คอลัมน์ D (ประเภท)
+        locationFound: formData.get("zone") || "",       // คอลัมน์ E (บริเวณที่พบ)
+        approxHeight: formData.get("height") || "",     // คอลัมน์ F (ความสูง)
+        girthSize: formData.get("girth") || "",         // คอลัมน์ G (เส้นรอบวง)
+        dbh: dbhText,                                    // คอลัมน์ H (DBH)
+        biomass: bioText,                                // คอลัมน์ I (มวลชีวภาพ)
+        co2: co2Text,                                    // คอลัมน์ J (CO2)
+        treeHealth: formData.get("health") || "",       // คอลัมน์ K (สุขภาพต้นไม้)
+        coordinator: formData.get("surveyor") || "",    // คอลัมน์ L (ผู้สำรวจ)
+        note: formData.get("note") || "",               // คอลัมน์ M (บันทึกเพิ่มเติม)
         imageBase64: base64String,
         imageType: "image/jpeg"
       };
 
       try {
+        // ยิงข้อมูลจาก GitHub ข้ามโลกไปหา Google Apps Script API
         const response = await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           body: JSON.stringify(payload)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.status === "success") {
-          alert("บันทึกข้อมูลต้นไม้ลงตารางเรียบร้อยแล้ว!");
-          location.reload(); 
+          alert("🎉 บันทึกข้อมูลและอัปโหลดรูปภาพลง Google Sheets สำเร็จ!");
+          treeForm.reset(); // ล้างข้อมูลในฟอร์มออกทั้งหมด
+          document.getElementById("previewContainer").innerHTML = ""; // ล้างรูปพรีวิวหน้าเว็บ
+          location.reload(); // รีเฟรชเพื่อแสดงผลลัพธ์ใหม่
         } else {
-          alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
+          alert("เกิดข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + result.message);
         }
       } catch (error) {
         console.error(error);
-        alert("การเชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง");
+        alert("การเชื่อมต่อระบบล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์ Web App");
       } finally {
-        if(btn) btn.innerText = "บันทึกข้อมูลต้นไม้";
+        if (submitBtn) submitBtn.innerText = "💾 บันทึกข้อมูลต้นไม้";
       }
     };
   };
-}
+});
+
 
 
 /* ===== ส่งออก CSV ===== */

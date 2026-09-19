@@ -219,21 +219,34 @@ renderPreview();
 }
 
 // เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRjWGOHbGlt_aqp8o_ewkzl2bEgvL5t7HBivDvmvOJhNO_78Ktvwk0gZiiECQjCgRq/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlbBqIkNleNEw_BHYL19p1YhUPmzJaxF5u3WTZMtMFP5C3uiu9mPBmYd71j63xD6O_/exec";
 
 async function submitForm() {
-  // เปลี่ยนปุ่มเป็นสถานะกำลังบันทึก
   const btn = document.querySelector("#treeForm button") || document.querySelector(".btn-submit"); 
   if(btn) btn.innerText = "⏳ กำลังบันทึก...";
 
-  const note = document.getElementById("note").value || "";
-  
-  // ใช้ .innerText หรือ .value ดูให้ตรงกับแท็กใน HTML ของคุณนะครับ (จากรูปน่าจะเป็นข้อความครอบแท็กธรรมดาใช้ innerText)
-  const dbh = document.getElementById("dbh").innerText.replace(" ซม.", "").trim();
-  const biomass = document.getElementById("biomass").innerText.replace(" กก.", "").trim();
-  const co2 = document.getElementById("co2").innerText.replace(" กก.", "").trim();
-  
-  const fileInput = document.getElementById("imageFile"); // ID ของช่องอัปโหลดรูปภาพ
+  // 📌 ดึงข้อมูลจากหน้าเว็บให้ครบทุกช่องตามคอลัมน์ใน Sheet 
+  // (อย่าลืมเปลี่ยนไอดีใน document.getElementById ให้ตรงกับของฟอร์มใน HTML จริงของคุณนะครับสหาย)
+  const payloadData = {
+    treeNumber: document.getElementById("treeNumberInput")?.value || "",     // คอลัมน์ A
+    treeName: document.getElementById("treeNameInput")?.value || "",         // คอลัมน์ B
+    scienceName: document.getElementById("scienceInput")?.value || "",       // คอลัมน์ C
+    treeType: document.getElementById("treeTypeSelect")?.value || "",        // คอลัมน์ D
+    locationFound: document.getElementById("locationInput")?.value || "",    // คอลัมน์ E
+    approxHeight: document.getElementById("heightInput")?.value || "",       // คอลัมน์ F
+    girthSize: document.getElementById("girthInput")?.value || "",           // คอลัมน์ G
+    
+    // ช่องพวกนี้ดึงตัวเลขจากค่าที่คำนวณได้บนหน้าจอ (และลบหน่วยภาษาไทยออก)
+    dbh: document.getElementById("dbh").innerText.replace(" ซม.", "").trim(), // คอลัมน์ H
+    biomass: document.getElementById("biomass").innerText.replace(" กก.", "").trim(), // คอลัมน์ I
+    co2: document.getElementById("co2").innerText.replace(" กก.", "").trim(), // คอลัมน์ J
+    
+    treeHealth: document.getElementById("healthSelect")?.value || "",        // คอลัมน์ K
+    coordinator: document.getElementById("surveyorInput")?.value || "",      // คอลัมน์ L
+    note: document.getElementById("note").value || ""                        // คอลัมน์ M
+  };
+
+  const fileInput = document.getElementById("imageFile"); // ID ช่องเลือกรูปภาพ
   const file = fileInput.files[0];
   
   if (!file) {
@@ -242,7 +255,7 @@ async function submitForm() {
     return;
   }
 
-  // --- เริ่มกระบวนการบีบอัดภาพเพื่อความเร็วสูงสุด ---
+  // กระบวนการบีบอัดภาพเพื่อความเร็วสูงสุด
   const reader = new FileReader();
   reader.readAsDataURL(file);
   reader.onload = function (event) {
@@ -250,7 +263,7 @@ async function submitForm() {
     img.src = event.target.result;
     img.onload = async function () {
       const canvas = document.createElement("canvas");
-      const MAX_WIDTH = 1000; // กำหนดความกว้างสูงสุดไม่เกิน 1000px เพื่อย่อขนาดไฟล์
+      const MAX_WIDTH = 1000; 
       let width = img.width;
       let height = img.height;
 
@@ -264,16 +277,12 @@ async function submitForm() {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      // บีบอัดคุณภาพรูปเหลือ 75% (ภาพยังชัด แต่ไฟล์จะเล็กลงมาก)
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะตัว Base64 บริสุทธิ์
+      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะตัวเนื้อข้อมูล Base64
 
-      // จับคู่ก้อนข้อมูลแบบ JSON Object เพื่อส่งไปคุยกับข้อมูลหลังบ้านให้เป๊ะ
+      // ประกอบก้อนข้อมูลข้อมูลทั้งหมด + รูปภาพ พร้อมส่ง
       const payload = {
-        note: note,
-        dbh: dbh,
-        biomass: biomass,
-        co2: co2,
+        ...payloadData,
         imageBase64: base64String,
         imageType: "image/jpeg"
       };
@@ -287,8 +296,8 @@ async function submitForm() {
         const result = await response.json();
         
         if (result.status === "success") {
-          alert("บันทึกข้อมูลสำเร็จ!");
-          location.reload(); // รีเฟรชเคลียร์ฟอร์มเมื่อสำเร็จ
+          alert("บันทึกข้อมูลต้นไม้ลงตารางเรียบร้อยแล้ว!");
+          location.reload(); 
         } else {
           alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
         }
@@ -301,6 +310,7 @@ async function submitForm() {
     };
   };
 }
+
 
 /* ===== ส่งออก CSV ===== */
 if (document.getElementById("btnExport")) {

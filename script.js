@@ -6,7 +6,7 @@
 const SHEETDB_URL = "https://sheetdb.io/api/v1/m7x855pegxfiw";
 
 // ⚠️ เว็บแอป URL ของ Google Apps Script (ตรวจสอบและใช้ลิงก์ปัจจุบันของคุณ)
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlbBqIkNleNEw_BHYL19p1YhUPmzJaxF5u3WTZMtMFP5C3uiu9mPBmYd71j63xD6O_/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyj195WrJTEn2XTpl2n3MwKzl1EkO1jR6qGrdsIhNXyo5nSxMd-ZYZtxeKZWIAy4Xs/exec";
 
 let trees = []; 
 

@@ -254,9 +254,9 @@ form?.addEventListener("submit", async function(e) {
   }
 
   // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
-   
+  
   const reader = new FileReader();
-  reader.readAsDataURL(fileInput.files[0]); // 💡 ล็อกดึงข้อมูลไฟล์ภาพใบแรกเข้ากระบวนการอ่านค่าอย่างถูกต้อง
+  reader.readAsDataURL(fileInput.files[0]); // 💡 เจาะจงดึงไฟล์ใบแรกสุดมาประมวลผล
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
@@ -278,9 +278,10 @@ form?.addEventListener("submit", async function(e) {
 
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
       
-      // 💡 จุดสำคัญที่สุดในการแก้บั๊กถอดรหัสสตริง:
-      // ดึงข้อความรหัสรูปภาพบริสุทธิ์ลำดับที่ 1 แปลงเป็นข้อความ String ธรรมดาให้ชัวร์ๆ ก่อนส่ง
-      const pureBase64Text = String(compressedBase64.split(",")[1]); 
+      // 💡 จุดปิดบั๊กถอดรหัสสตริงแบบ 100%: 
+      // แยกส่วนประกอบแล้วหยิบเฉพาะข้อความรหัสรูปภาพแท้ ๆ ลำดับที่ 1 (ดักจับ [1] เจาะจงชัดเจน)
+      const base64Parts = compressedBase64.split(",");
+      const pureBase64Text = base64Parts[1]; 
 
       // ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
@@ -295,7 +296,7 @@ form?.addEventListener("submit", async function(e) {
         treeHealth: selectedHealth,
         coordinator: f.get("surveyor") || "",
         note: f.get("note") || "-",
-        imageBase64: pureBase64Text, // 💡 ส่งค่าข้อความตัวหนังสือล้วนๆ ไปให้หลังบ้านแกะได้ง่ายๆ
+        imageBase64: pureBase64Text, // ส่งเฉพาะก้อนสตริงบริสุทธิ์ไร้ metadata ปนเปื้อน
         imageType: "image/jpeg"
       };
 
@@ -326,16 +327,6 @@ form?.addEventListener("submit", async function(e) {
       }
     };
   };
-
-/* ===== ส่งออก CSV ===== */
-if (document.getElementById("btnExport")) {
-  document.getElementById("btnExport").onclick = ()=>{
-    const head = "รหัส,ชื่อ,ชื่อวิทยาศาสตร์,ประเภท,บริเวณ,ความสูง(ม.),เส้นรอบวง(ซม.),DBH(ซม.),CO2(กก.),สุขภาพ,ผู้สำรวจ,หมายเหตุ";
-    const rows = trees.map(t=>[t.code,t.name,t.sci,t.type,t.zone,t.height,t.girth,dbh(t.girth).toFixed(1),co2(t.girth,t.height).toFixed(1),HEALTH_TH[t.health],t.surveyor,(t.note||"").replace(/,/g,"；")].join(","));
-    const blob = new Blob(["\uFEFF"+head+"\n"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ฐานข้อมูลต้นไม้_ท่าม่วง.csv"; a.click();
-  };
-}
 
 /* ===== ควบคุมตัวกรองค้นหาเบื้องต้น ===== */
 ["searchBox","filterType","filterHealth"].forEach(id=>{

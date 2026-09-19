@@ -1,9 +1,12 @@
 // =========================================================
-// 🌳 ส่วนที่ 1: ระบบจัดการข้อมูลคลาวด์ (ครึ่งบน)
+// 🌳 ส่วนที่ 1: ระบบจัดการข้อมูลคลาวด์และแสดงผล
 // =========================================================
 
-// ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ให้เป็นลิงก์ API ของ SheetDB คุณนะครับ
-const SHEETDB_URL = "https://sheetdb.io/api/v1/m7x855pegxfiw";
+// ⚠️ ลิงก์ดึงข้อมูลตารางกลับมาแสดงบนหน้าเว็บ (คงเดิมไว้)
+const SHEETDB_URL = "https://sheetdb.io";
+
+// ⚠️ เปลี่ยนลิงก์ด้านล่างให้เป็น Web App URL ที่ได้จากการ Deploy ใน Google Apps Script ของคุณนะครับ
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlbBqIkNleNEw_BHYL19p1YhUPmzJaxF5u3WTZMtMFP5C3uiu9mPBmYd71j63xD6O_/exec";
 
 let trees = []; 
 
@@ -18,7 +21,6 @@ const ICONS = {"ไม้ยืนต้น":"🌳","ไม้ดอก":"🌸",
 function refresh() {
   renderStats();
   renderTrees();
-  //renderMap();
   renderDash();
 }
 
@@ -31,45 +33,38 @@ function loadTreeData() {
     })
     .then(data => {
       if (Array.isArray(data)) {
-        // แปลงข้อมูลแถวตารางจาก Google Sheets ให้เข้าล็อกโครงสร้างของหน้าเว็บ
         trees = data.map((item, index) => {
-          // 1. ดักจับและแปลงค่าสุขภาพกลับเป็นคีย์ภาษาอังกฤษสำหรับ CSS โค้ดเดิม
+          // แก้ไขบั๊กตัวสะกดชื่อคอลัมน์ให้ดักจับตรงกับหน้าตารางชีตจริง (ไม่มีช่องว่างหน้าเครื่องหมาย *)
           let healthKey = "good";
-          const hValue = item["สุขภาพต้นไม้ *"] || item["สุขภาพ"] || "";
+          const hValue = item["สุขภาพต้นไม้*"] || item["สุขภาพต้นไม้ *"] || item["สุขภาพ"] || "";
           if (hValue.includes("เฝ้าระวัง")) healthKey = "fair";
           if (hValue.includes("ด่วน") || hValue.includes("ผุ")) healthKey = "bad";
 
-          const treeType = item["ประเภท *"] || item["ประเภท"] || "ไม้ยืนต้น";
-          
-          // 2. ดึงค่าชื่อต้นไม้ (ถ้าไม่มีให้ใช้คำแก้ขัดเพื่อไม่ให้การ์ดขาวโพลน)
-          const treeName = item["ชื่อต้นไม้(ไทย) *"] || item["ชื่อต้นไม้"] || "ไม่ระบุชื่อ";
+          const treeType = item["ประเภท*"] || item["ประเภท *"] || item["ประเภท"] || "ไม้ยืนต้น";
+          const treeName = item["ชื่อต้นไม้(ไทย)*"] || item["ชื่อต้นไม้(ไทย) *"] || item["ชื่อต้นไม้"] || "ไม่ระบุชื่อ";
 
           return {
-            // รันรหัสต้นไม้ TMR-001, TMR-002 ตามลำดับแถวอัตโนมัติ
-            code: `TMR-${String(index + 1).padStart(3, "0")}`, 
+            code: item["นิทรรศการยุค"] || `TMR-${String(index + 1).padStart(3, "0")}`, 
             name: treeName,
             sci: item["ชื่อวิทยาศาสตร์"] || "-",
             type: treeType,
-            zone: item["บริเวณที่พบ *"] || item["บริเวณ"] || "ไม่ระบุบริเวณ",
+            zone: item["บริเวณที่พบ*"] || item["บริเวณที่พบ *"] || "ไม่ระบุบริเวณ",
             
-            // 3. ดึงค่าตัวเลขความสูงและเส้นรอบวง แปลงจากข้อความให้เป็นตัวเลขทศนิยม
-            height: parseFloat(item["ความสูงโดยประมาณ (เมตร) *"] || item["ความสูง"]) || 0, 
-            girth: parseFloat(item["เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *"] || item["เส้นรอบวง"]) || 0, 
+            height: parseFloat(item["ความสูงโดยประมาณ(เมตร)*"] || item["ความสูงโดยประมาณ (เมตร) *"] || 0), 
+            girth: parseFloat(item["เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *"] || item["เส้นรอบวงลำต้นที่ 1.30 ม."]) || 0, 
             
             health: healthKey,
-            surveyor: item["ผู้สำรวจ *"] || item["ผู้สำรวจ"] || "ไม่ระบุนาม",
+            surveyor: item["ผู้สำรวจ*"] || item["ผู้สำรวจ *"] || "ไม่ระบุนาม",
             note: item["บันทึกเพิ่มเติม"] || "-",
             icon: ICONS[treeType] || "🌳"
           };
         });
         
-        console.log("🔄 ซิงค์ข้อมูลคลาวด์กลับเข้าหน้าเว็บสำเร็จ จำนวน:", trees.length);
-        refresh(); // 💡 สั่งรันคำสั่งวาดการ์ด วาดสถิติ และกราฟสรุปผลใหม่ทันทีด้วยข้อมูลจริง!
+        console.log("🔄 ซิงค์ข้อมูลสำเร็จ จำนวน:", trees.length);
+        refresh(); 
       }
     })
-    .catch(error => {
-      console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลกลับหน้าเว็บ:", error);
-    });
+    .catch(error => console.error("เกิดข้อผิดพลาดในการโหลดข้อมูล:", error));
 }
 
 /* ===== สถิติ Hero ===== */
@@ -78,19 +73,20 @@ function renderStats(){
   const species = new Set(trees.map(t=>t.name)).size;
   const carbon = trees.reduce((s,t)=>s+co2(t.girth,t.height),0);
   const good = trees.filter(t=>t.health==="good").length;
+  
   animate(document.getElementById("stTotal"), total);
   animate(document.getElementById("stSpecies"), species);
   animate(document.getElementById("stCarbon"), Math.round(carbon));
-  document.getElementById("stHealth").textContent = (total ? Math.round(good/total*100) : 0) + "%";
+  
+  const healthEl = document.getElementById("stHealth");
+  if(healthEl) healthEl.textContent = (total ? Math.round(good/total*100) : 0) + "%";
 }
+
 function animate(el,target){
   if (!el) return;
   let n=0, step=Math.max(1,Math.ceil(target/30));
   const id=setInterval(()=>{ n+=step; if(n>=target){n=target;clearInterval(id);} el.textContent=n.toLocaleString();},30);
 }
-// =========================================================
-// 🌳 ส่วนที่ 2: ระบบแสดงผลฟอร์มและตัวกรอง (ครึ่งล่าง)
-// =========================================================
 
 /* ===== การ์ดฐานข้อมูล ===== */
 function renderTrees(){
@@ -159,107 +155,116 @@ function renderDash(){
     return `<div class="bar-row"><div style="display:flex;justify-content:space-between"><span>${HEALTH_TH[h]}</span><b>${n} ต้น (${pct.toFixed(0)}%)</b></div>
     <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${colors[h]}"></div></div></div>`; }).join("");
 }
-
-/* ===== ฟอร์มสำรวจ (ดักส่งค่าเข้า Google Sheets) ===== */
+// =========================================================
+// 🧮 ส่วนที่ 2: ระบบคำนวณเรียลไทม์ และระบบพรีวิวรูปภาพสไตล์ดั้งเดิม
+// =========================================================
 const form = document.getElementById("treeForm");
+const fileInput = document.getElementById("fileInput");
+const uploadBox = document.getElementById("uploadBox");
+
 if (form) {
+  // คำนวณค่า DBH และคาร์บอนแบบพิมพ์ไปขึ้นโชว์ไปอัตโนมัติ
   form.addEventListener("input", ()=>{
     const g = +form.girth.value, h = +form.height.value;
     if(g>0 && h>0){
       document.getElementById("cDbh").textContent = dbh(g).toFixed(1)+" ซม.";
       document.getElementById("cBio").textContent = bio(g,h).toFixed(1)+" กก.";
       document.getElementById("cCo2").textContent = co2(g,h).toFixed(1)+" กก.";
+    } else {
+      document.getElementById("cDbh").textContent = "– ซม.";
+      document.getElementById("cBio").textContent = "– กก.";
+      document.getElementById("cCo2").textContent = "– กก.";
     }
-  });
-
-  form.addEventListener("submit", e=>{
-    e.preventDefault(); 
-    const f = new FormData(form);
-    let selectedHealth = "สมบูรณ์ดี";
-    if (f.get("health") === "fair") selectedHealth = "ต้องเฝ้าระวัง";
-    if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
-
-    const record = {
-     "timestamps": new Date().toLocaleString("th-TH"),
-     "ชื่อต้นไม้(ไทย) *": f.get("name"),
-     "ชื่อวิทยาศาสตร์": f.get("sci"),
-     "ประเภท *": f.get("type"),           
-     "บริเวณที่พบ *": f.get("zone"),       
-     "ความสูงโดยประมาณ (เมตร) *": f.get("height"),  
-     "เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *": f.get("girth"),
-     "dbh(เส้นผ่านศูนย์กลางเพียงอก)": dbh(+f.get("girth")).toFixed(1), 
-     "มวลชีวภาพ": bio(+f.get("girth"), +f.get("height")).toFixed(1),
-     "co2": co2(+f.get("girth"), +f.get("height")).toFixed(1),
-     "สุขภาพต้นไม้ *": selectedHealth,    
-     "ผู้สำรวจ *": f.get("surveyor"),     
-     "บันทึกเพิ่มเติม": f.get("note")
-    };
-
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const oldText = submitBtn.innerHTML; submitBtn.disabled = true; submitBtn.innerHTML = "⏳ กำลังบันทึก...";
-
-    data.images = JSON.stringify(treeImages);
-
-    fetch(SHEETDB_URL, {
-      method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [record] })
-    })
-    .then(res => { if (!res.ok) throw new Error(); return res.json(); })
-    .then(() => {
-      alert(`🎉 บันทึกข้อมูลสำเร็จแล้ว!`); form.reset();
-      treeImages = [];
-renderPreview();
-
-      ["cDbh","cBio","cCo2"].forEach(id => document.getElementById(id).textContent="– กก.");
-      loadTreeData(); // รีโหลดเพื่อดึงข้อมูลใหม่มาโชว์ทันที
-    })
-    .catch(() => alert("❌ เกิดข้อผิดพลาด กรุณาเช็กสิทธิ์แชร์หรือลิ้งก์ API"))
-    .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = oldText; });
   });
 }
 
-// เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
-// ⚠️ เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets ของคุณ
-const GAS_WEB_APP_URL = "วาง_URL_เว็บแอป_ของ_Google_Apps_Script_ตรงนี้";
+// ผูกเหตุการณ์เมื่อกดที่กล่องอัปโหลดภาพ ให้ไปเรียกเปิดช่องเลือกไฟล์ของระบบบราวเซอร์
+uploadBox?.addEventListener("click", () => fileInput?.click());
 
-const treeForm = document.getElementById("treeForm");
-
-treeForm.addEventListener("submit", async function (e) {
-  e.preventDefault(); // บล็อกไม่ให้หน้าจอโหลดใหม่ตอนกดส่ง
-
-  const submitBtn = treeForm.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.innerText = "⏳ กำลังบันทึก...";
-
-  // 1. ดึงข้อมูลจากโครงสร้างฟอร์มจริง (ดึงตามคุณสมบัติ name ใน HTML ของคุณ)
-  const formData = new FormData(treeForm);
+// ✨ ระบบดึงรูปขึ้นพรีวิวตามคลาสแผ่นการ์ดจริงใน style.css (.preview-item) พร้อมดักจับขนาดไฟล์จริง
+fileInput?.addEventListener("change", () => {
+  const previewContainer = document.getElementById("previewContainer");
+  if (!previewContainer) return;
   
-  // คำนวณรหัสต้นไม้แบบอัตโนมัติตามเวลา หรือปล่อยว่างถ้าคุณจะกรอกเอง (คอลัมน์ A)
+  previewContainer.innerHTML = ""; // ล้างค่ารูปพรีวิวเก่าออกก่อนเมื่อมีการเลือกรูปใหม่
+
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0]; // ดึงข้อมูลไฟล์รูปหลักตัวแรก
+    
+    // แปลงขนาดไฟล์ภาพดิบจริงจากคอมฯ/มือถือ ให้เป็น Megabytes (MB)
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // 💡 วาดภาพลงล็อกตามโครงสร้างคลาส (.preview-item) ใน CSS ของคุณ พร้อมแจ้งสเปกขนาดรูปใต้กล่อง
+      previewContainer.innerHTML = `
+        <div style="width: 100%;">
+          <div class="preview-item">
+            <img src="${e.target.result}" alt="Preview ต้นไม้">
+            <button type="button" onclick="clearSelectedImage()">✕</button>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.82rem; color: #556; line-height: 1.4;">
+            <span style="color: var(--green2); font-weight: 600;">📸 เลือกสำเร็จ:</span> ${file.name}
+            <br><span style="color: #778;">ขนาดไฟล์ต้นฉบับ: ${fileSizeMB} MB</span>
+            <span style="color: #007bff; font-weight: 600;">(ระบบจะช่วยบีบอัดไฟล์ภาพให้เซฟข้อมูลไวขึ้นอัตโนมัติ)</span>
+          </div>
+        </div>
+      `;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// ฟังก์ชันเสริมสำหรับปุ่มกากบาท (✕) บนตัวรูปพรีวิวเพื่อล้างรูปที่เลือกทิ้ง
+function clearSelectedImage() {
+  if(fileInput) fileInput.value = ""; // ล้างไฟล์จากอินพุต
+  const previewContainer = document.getElementById("previewContainer");
+  if(previewContainer) previewContainer.innerHTML = ""; // ล้างหน้าจอพรีวิว
+}
+
+// =========================================================
+// 💾 ส่วนที่ 3: จัดส่งฟอร์ม บีบอัดภาพ และบันทึกข้อมูล 15 คอลัมน์
+// =========================================================
+form?.addEventListener("submit", async function(e) {
+  e.preventDefault(); 
+  
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const oldText = submitBtn.innerHTML; 
+  submitBtn.disabled = true; 
+  submitBtn.innerHTML = "⏳ กำลังบันทึก...";
+
+  const f = new FormData(form);
+  
+  // แปลงค่ารหัสสุขภาพเป็นข้อความภาษาไทยให้ตรงล็อกหน้าตาราง Google Sheets
+  let selectedHealth = "สมบูรณ์ดี";
+  if (f.get("health") === "fair") selectedHealth = "ต้องเฝ้าระวัง";
+  if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
+
+  // รันสร้างรหัสต้นไม้ใหม่ TMR-รุ่นปี-สุ่มเลข 3 หลัก (คอลัมน์ A)
   const treeNumber = "TMR-" + new Date().getFullYear().toString().slice(-2) + "-" + Math.floor(100 + Math.random() * 900);
 
-  // 2. ดึงค่า DBH, มวลชีวภาพ, CO2 ที่ระบบคำนวณและแสดงอยู่บนหน้าจอ (คอลัมน์ H, I, J)
-  const dbhText = document.getElementById("cDbh").innerText.replace(" ซม.", "").trim();
-  const bioText = document.getElementById("cBio").innerText.replace(" กก.", "").trim();
-  const co2Text = document.getElementById("cCo2").innerText.replace(" กก.", "").trim();
+  const dbhText = document.getElementById("cDbh").textContent.replace(" ซม.", "").trim();
+  const bioText = document.getElementById("cBio").textContent.replace(" กก.", "").trim();
+  const co2Text = document.getElementById("cCo2").textContent.replace(" กก.", "").trim();
 
-  // 3. ดึงไฟล์รูปภาพจากช่องอัปโหลดรูป (id="fileInput")
-  const fileInput = document.getElementById("fileInput");
-  const file = fileInput.files[0]; // เลือกดึงภาพแรก
-
-  if (!file) {
-    alert("กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึก!");
-    if (submitBtn) submitBtn.innerText = "💾 บันทึกข้อมูลต้นไม้";
+  // ดักจับไฟล์รูปภาพจากหน้าจอ
+  const files = fileInput?.files;
+  if (!files || files.length === 0) {
+    alert("❌ กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึกข้อมูลด้วยครับสหาย!");
+    submitBtn.disabled = false; 
+    submitBtn.innerHTML = oldText;
     return;
   }
 
-  // --- เริ่มกระบวนการบีบอัดภาพเพื่อส่งข้อมูลให้ไวภายในไม่กี่วินาที ---
+  // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
   const reader = new FileReader();
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(files[0]);
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
     img.onload = async function () {
       const canvas = document.createElement("canvas");
-      const MAX_WIDTH = 1000; // ล็อกความกว้างไว้ไม่เกิน 1,000px เพื่อย่อขนาดไฟล์ให้เล็กลงมาก ๆ
+      const MAX_WIDTH = 1000; 
       let width = img.width;
       let height = img.height;
 
@@ -273,31 +278,30 @@ treeForm.addEventListener("submit", async function (e) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      // บีบอัดความละเอียดภาพเหลือ 75% ไฟล์จะเบาลงจากหลาย MB เหลือหลักร้อย KB รูปยังชัด
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-      const base64String = compressedBase64.split(",")[1]; // ตัดส่วนหัวเอาเฉพาะตัวรหัส Base64 บริสุทธิ์
+      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะเนื้อข้อมูล Base64 บริสุทธิ์
 
-      // 4. มัดรวมก้อนข้อมูลส่งผ่านตัวแปร (Payload) ให้จับคู่เป๊ะๆ ทั้ง 15 คอลัมน์
+      // ผูก Payload ห่อข้อมูลนำส่งแยก 15 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
-        treeNumber: treeNumber,                          // คอลัมน์ A (รหัสต้นไม้)
-        treeName: formData.get("name") || "",           // คอลัมน์ B (ชื่อไทย)
-        scienceName: formData.get("sci") || "",         // คอลัมน์ C (ชื่อวิทยาศาสตร์)
-        treeType: formData.get("type") || "",           // คอลัมน์ D (ประเภท)
-        locationFound: formData.get("zone") || "",       // คอลัมน์ E (บริเวณที่พบ)
-        approxHeight: formData.get("height") || "",     // คอลัมน์ F (ความสูง)
-        girthSize: formData.get("girth") || "",         // คอลัมน์ G (เส้นรอบวง)
-        dbh: dbhText,                                    // คอลัมน์ H (DBH)
-        biomass: bioText,                                // คอลัมน์ I (มวลชีวภาพ)
-        co2: co2Text,                                    // คอลัมน์ J (CO2)
-        treeHealth: formData.get("health") || "",       // คอลัมน์ K (สุขภาพต้นไม้)
-        coordinator: formData.get("surveyor") || "",    // คอลัมน์ L (ผู้สำรวจ)
-        note: formData.get("note") || "",               // คอลัมน์ M (บันทึกเพิ่มเติม)
+        treeNumber: treeNumber,
+        treeName: f.get("name") || "",
+        scienceName: f.get("sci") || "-",
+        treeType: f.get("type") || "",
+        locationFound: f.get("zone") || "",
+        approxHeight: f.get("height") || "0",
+        girthSize: f.get("girth") || "0",
+        dbh: dbhText,
+        biomass: bioText,
+        co2: co2Text,
+        treeHealth: selectedHealth,
+        coordinator: f.get("surveyor") || "",
+        note: f.get("note") || "-",
         imageBase64: base64String,
         imageType: "image/jpeg"
       };
 
       try {
-        // ยิงข้อมูลจาก GitHub ข้ามโลกไปหา Google Apps Script API
+        // ยิงข้อมูลจากหน้าเว็บบน GitHub เข้าหา Google Apps Script API หลังบ้าน
         const response = await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           body: JSON.stringify(payload)
@@ -307,23 +311,24 @@ treeForm.addEventListener("submit", async function (e) {
 
         if (result.status === "success") {
           alert("🎉 บันทึกข้อมูลและอัปโหลดรูปภาพลง Google Sheets สำเร็จ!");
-          treeForm.reset(); // ล้างข้อมูลในฟอร์มออกทั้งหมด
-          document.getElementById("previewContainer").innerHTML = ""; // ล้างรูปพรีวิวหน้าเว็บ
-          location.reload(); // รีเฟรชเพื่อแสดงผลลัพธ์ใหม่
+          form.reset();
+          const preview = document.getElementById("previewContainer");
+          if(preview) preview.innerHTML = "";
+          ["cDbh","cBio","cCo2"].forEach(id => document.getElementById(id).textContent="– กก.");
+          loadTreeData(); // รีโหลดแสดงข้อมูลการ์ดแผ่นใหม่ทันทีบนฐานข้อมูลหน้าเว็บ
         } else {
-          alert("เกิดข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + result.message);
+          alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
         }
       } catch (error) {
         console.error(error);
-        alert("การเชื่อมต่อระบบล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์ Web App");
+        alert("❌ การเชื่อมต่อล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์ Web App");
       } finally {
-        if (submitBtn) submitBtn.innerText = "💾 บันทึกข้อมูลต้นไม้";
+        submitBtn.disabled = false; 
+        submitBtn.innerHTML = oldText;
       }
     };
   };
 });
-
-
 
 /* ===== ส่งออก CSV ===== */
 if (document.getElementById("btnExport")) {
@@ -341,7 +346,12 @@ if (document.getElementById("btnExport")) {
 });
 if (document.getElementById("btnReset")) {
   document.getElementById("btnReset").onclick = ()=>{
-    document.getElementById("searchBox").value = ""; document.getElementById("filterType").selectedIndex = 0; document.getElementById("filterHealth").selectedIndex = 0; renderTrees();
+    document.getElementById("searchBox").value = ""; 
+    document.getElementById("filterType").selectedIndex = 0; 
+    document.getElementById("filterHealth").selectedIndex = 0; 
+    renderTrees();
   };
 }
 
+// เริ่มต้นโหลดข้อมูลแสดงผลการ์ดทันทีเมื่อเปิดหน้าเว็บครั้งแรก
+window.addEventListener("DOMContentLoaded", loadTreeData);

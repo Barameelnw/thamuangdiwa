@@ -281,6 +281,7 @@ form?.addEventListener("submit", async function(e) {
       const base64String = compressedBase64.split(",")[1]; 
 
       // ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้าน
+            // 💡 ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
         treeName: f.get("name") || "",
         scienceName: f.get("sci") || "-",
@@ -293,9 +294,14 @@ form?.addEventListener("submit", async function(e) {
         treeHealth: selectedHealth,
         coordinator: f.get("surveyor") || "",
         note: f.get("note") || "-",
-        imageBase64: base64String, 
+        
+        // ❌ ของเดิม: imageBase64: base64String,
+        //  ของใหม่ที่แก้ไข (เติม [1] ข้างหลังเพื่อดึงรหัสตัวหนังสือแท้ๆ ไปแก้บั๊ก Blob):
+        imageBase64: base64String[1], 
+        
         imageType: "image/jpeg"
       };
+
 
       try {
         const response = await fetch(GAS_WEB_APP_URL, {

@@ -294,3 +294,58 @@ function removeImage(i){ treeImages.splice(i, 1); renderPreview(); }
 
 // เริ่มต้นระบบดึงข้อมูลทันทีเมื่อเปิดหน้าเว็บ
 document.addEventListener("DOMContentLoaded", loadTreeData);
+// เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRjWGOHbGlt_aqp8o_ewkzl2bEgvL5t7HBivDvmvOJhNO_78Ktvwk0gZiiECQjCgRq/exec";
+
+async function submitForm() {
+  const note = document.getElementById("note").value; // ดึงค่าจากฟิลด์ บันทึกเพิ่มเติม
+  const dbh = document.getElementById("dbh").innerText; // ดึงค่า DBH
+  const biomass = document.getElementById("biomass").innerText; // ดึงค่ามวลชีวภาพ
+  const co2 = document.getElementById("co2").innerText; // ดึงค่า CO2
+  
+  const fileInput = document.getElementById("imageFile"); // สมมติว่าตั้ง id ช่องอัปโหลดว่า imageFile
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert("กรุณาเลือกรูปภาพก่อนบันทึก!");
+    return;
+  }
+
+  // แปลงรูปภาพเป็น Base64
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = async function () {
+    const base64String = reader.result.split(",")[1]; // ตัดส่วนหัว metadata ออก เอาเฉพาะข้อมูล Base64
+    const fileType = file.type; // เก็บประเภทไฟล์ เช่น image/png
+
+    // เตรียมก้อนข้อมูลที่จะส่ง
+    const payload = {
+      note: note,
+      dbh: dbh,
+      biomass: biomass,
+      co2: co2,
+      imageBase64: base64String,
+      imageType: fileType
+    };
+
+    try {
+      // ส่งข้อมูลไปยัง Google Sheets Web App (API)
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      
+      if (result.status === "success") {
+        alert("บันทึกข้อมูลต้นไม้เรียบร้อยแล้ว!");
+        // โค้ดสำหรับเคลียร์ฟอร์ม หรือรีเซ็ตหน้าจอของคุณต่อตรงนี้...
+      } else {
+        alert("เกิดข้อผิดพลาด: " + result.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("ไม่สามารถเชื่อมต่อกับ Server ได้");
+    }
+  };
+}

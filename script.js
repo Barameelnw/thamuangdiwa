@@ -1,12 +1,12 @@
 // =========================================================
-// 🌳 ส่วนที่ 1: ระบบจัดการข้อมูลคลาวด์และแสดงผล
+// 🌳 ส่วนที่ 1: ระบบจัดการข้อมูลคลาวด์และแสดงผลคลาวด์
 // =========================================================
 
-// 💡 แก้ไขบั๊กตัวสะกดคืนลิงก์ดึงข้อมูลจริงกลับมาแสดงพรีวิวบนหน้าเว็บ
+// 💡 แมปช่องลิงก์ API สำหรับดึงข้อมูลจริงกลับมาวาดพรีวิวบนหน้าจอเว็บ
 const SHEETDB_URL = "https://sheetdb.io/api/v1/m7x855pegxfiw";
 
-// ⚠️ เว็บแอป URL ของ Google Apps Script (ตรวจสอบและใช้ลิงก์ปัจจุบันของคุณ)
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyj195WrJTEn2XTpl2n3MwKzl1EkO1jR6qGrdsIhNXyo5nSxMd-ZYZtxeKZWIAy4Xs/exec";
+// ⚠️ เว็บแอป URL ของ Google Apps Script ปัจจุบันของคุณ (ตรงล็อกเป๊ะ!)
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzumH_JqU6sziTrlTMKF-ZNsz_2r0WWCFVfxn32IGD-fRa1QTaEzb2tRbP7LxSkUZEi/exec";
 
 let trees = []; 
 
@@ -35,25 +35,26 @@ function loadTreeData() {
       if (Array.isArray(data)) {
         trees = data.map((item, index) => {
           let healthKey = "good";
-          const hValue = item["สุขภาพต้นไม้*"] || item["สุขภาพต้นไม้ *"] || item["สุขภาพ"] || "";
+          const hValue = item["สุขภาพต้นไม้ *"] || "";
           if (hValue.includes("เฝ้าระวัง")) healthKey = "fair";
           if (hValue.includes("ด่วน") || hValue.includes("ผุ")) healthKey = "bad";
 
-          const treeType = item["ประเภท*"] || item["ประเภท *"] || item["ประเภท"] || "ไม้ยืนต้น";
-          const treeName = item["ชื่อต้นไม้(ไทย)*"] || item["ชื่อต้นไม้(ไทย) *"] || item["ชื่อต้นไม้"] || "ไม่ระบุชื่อ";
+          const treeType = item["ประเภท *"] || "ไม้ยืนต้น";
+          const treeName = item["ชื่อต้นไม้(ไทย) *"] || "ไม่ระบุชื่อ";
 
           return {
-            code: item["นิทรรศการยุค"] || `TMR-${String(index + 1).padStart(3, "0")}`, 
+            // ให้การ์ดหน้าเว็บแสดงรหัสตามข้อมูลลำดับแถวพรีวิว
+            code: `TMR-${String(index + 1).padStart(3, "0")}`, 
             name: treeName,
             sci: item["ชื่อวิทยาศาสตร์"] || "-",
             type: treeType,
-            zone: item["บริเวณที่พบ*"] || item["บริเวณที่พบ *"] || "ไม่ระบุบริเวณ",
+            zone: item["บริเวณที่พบ *"] || "ไม่ระบุบริเวณ",
             
-            height: parseFloat(item["ความสูงโดยประมาณ(เมตร)*"] || item["ความสูงโดยประมาณ (เมตร) *"] || 0), 
-            girth: parseFloat(item["เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *"] || item["เส้นรอบวงลำต้นที่ 1.30 ม."]) || 0, 
+            height: parseFloat(item["ความสูงโดยประมาณ (เมตร) *"] || 0), 
+            girth: parseFloat(item["เส้นรอบวงลำต้นที่ 1.30 ม. (ซม.) *"]) || 0, 
             
             health: healthKey,
-            surveyor: item["ผู้สำรวจ*"] || item["ผู้สำรวจ *"] || "ไม่ระบุนาม",
+            surveyor: item["ผู้สำรวจ *"] || "ไม่ระบุนาม",
             note: item["บันทึกเพิ่มเติม"] || "-",
             icon: ICONS[treeType] || "🌳"
           };
@@ -155,9 +156,94 @@ function renderDash(){
     <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${colors[h]}"></div></div></div>`; }).join("");
 }
 // =========================================================
-  // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
+// 🧮 ส่วนที่ 2: ระบบคำนวณเรียลไทม์, พรีวิว และส่งข้อมูลเข้าคลาวด์
+// =========================================================
+const form = document.getElementById("treeForm");
+const fileInput = document.getElementById("fileInput");
+const uploadBox = document.getElementById("uploadBox");
+
+if (form) {
+  form.addEventListener("input", ()=>{
+    const g = +form.girth.value, h = +form.height.value;
+    if(g>0 && h>0){
+      document.getElementById("cDbh").textContent = dbh(g).toFixed(1)+" ซม.";
+      document.getElementById("cBio").textContent = bio(g,h).toFixed(1)+" กก.";
+      document.getElementById("cCo2").textContent = co2(g,h).toFixed(1)+" กก.";
+    } else {
+      document.getElementById("cDbh").textContent = "– ซม.";
+      document.getElementById("cBio").textContent = "– กก.";
+      document.getElementById("cCo2").textContent = "– กก.";
+    }
+  });
+}
+
+uploadBox?.addEventListener("click", () => fileInput?.click());
+
+fileInput?.addEventListener("change", () => {
+  const previewContainer = document.getElementById("previewContainer");
+  if (!previewContainer) return;
+  
+  previewContainer.innerHTML = ""; 
+
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0]; 
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      previewContainer.innerHTML = `
+        <div style="width: 100%;">
+          <div class="preview-item">
+            <img src="${e.target.result}" alt="Preview ต้นไม้">
+            <button type="button" onclick="clearSelectedImage()">✕</button>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.82rem; color: #556; line-height: 1.4;">
+            <span style="color: var(--green2); font-weight: 600;">📸 เลือกสำเร็จ:</span> ${file.name}
+            <br><span style="color: #778;">ขนาดไฟล์ต้นฉบับ: ${fileSizeMB} MB</span>
+            <span style="color: #007bff; font-weight: 600;">(ระบบจะช่วยบีบอัดไฟล์ภาพให้เซฟข้อมูลไวขึ้นอัตโนมัติ)</span>
+          </div>
+        </div>
+      `;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function clearSelectedImage() {
+  if(fileInput) fileInput.value = ""; 
+  const previewContainer = document.getElementById("previewContainer");
+  if(previewContainer) previewContainer.innerHTML = ""; 
+}
+
+/* ===== 💾 ดักส่งฟอร์ม บีบอัดรูปภาพ และมัดรหัสแก้บั๊ก Exception Blob แบบเด็ดขาด ===== */
+form?.addEventListener("submit", async function(e) {
+  e.preventDefault(); 
+  
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const oldText = submitBtn.innerHTML; 
+  submitBtn.disabled = true; 
+  submitBtn.innerHTML = "⏳ กำลังบันทึก...";
+
+  const f = new FormData(form);
+  
+  let selectedHealth = "สมบูรณ์ดี";
+  if (f.get("health") === "fair") selectedHealth = "ต้องเฝ้าระวัง";
+  if (f.get("health") === "bad") selectedHealth = "ต้องดูแลด่วน";
+
+  const dbhText = document.getElementById("cDbh").textContent.replace(" ซม.", "").trim();
+  const bioText = document.getElementById("cBio").textContent.replace(" กก.", "").trim();
+  const co2Text = document.getElementById("cCo2").textContent.replace(" กก.", "").trim();
+
+  const files = fileInput?.files;
+  if (!files || files.length === 0) {
+    alert("❌ กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึกข้อมูลด้วยครับสหาย!");
+    submitBtn.disabled = false; 
+    submitBtn.innerHTML = oldText;
+    return;
+  }
+
   const reader = new FileReader();
-  reader.readAsDataURL(files[0]); // ล็อกให้ดึงไฟล์ภาพแรกสุดที่ถูกต้อง
+  reader.readAsDataURL(files[0]); 
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
@@ -177,16 +263,12 @@ function renderDash(){
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      // ย่อขนาดไฟล์และคุณภาพภาพ
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
       
-      // 💡 ปรับการดึงรหัสตรงนี้ใหม่: แยกหัวข้อล้าง metadata แล้วดึง text บริสุทธิ์ลำดับที่ 1 แบบชัวร์ๆ
-      const base64Parts = compressedBase64.split(",");
-      const pureBase64Text = base64Parts[1]; 
+      // 💡 ดักจับข้อความ Base64 แท้ ๆ ตำแหน่ง [1] เพื่อป้องกันบั๊กวัตถุ Blob บัฟเฟอร์
+      const base64String = compressedBase64.split(",")[1]; 
 
-      // ผูก Payload ห่อข้อมูลนำส่งแยก 15 ตัวแปร
       const payload = {
-        treeNumber: treeNumber,
         treeName: f.get("name") || "",
         scienceName: f.get("sci") || "-",
         treeType: f.get("type") || "",
@@ -194,12 +276,11 @@ function renderDash(){
         approxHeight: f.get("height") || "0",
         girthSize: f.get("girth") || "0",
         dbh: dbhText,
-        biomass: bioText,
         co2: co2Text,
         treeHealth: selectedHealth,
         coordinator: f.get("surveyor") || "",
         note: f.get("note") || "-",
-        imageBase64: pureBase64Text, // 💡 ส่งตัวหนังสือข้อความแท้ๆ ไม่ส่งอะเรย์ติดไป
+        imageBase64: base64String, // ส่งข้อความสตริงแท้ ๆ ป้องกันบั๊กเซิร์ฟเวอร์ค้าง
         imageType: "image/jpeg"
       };
 
@@ -230,3 +311,30 @@ function renderDash(){
       }
     };
   };
+});
+
+/* ===== ส่งออก CSV ===== */
+if (document.getElementById("btnExport")) {
+  document.getElementById("btnExport").onclick = ()=>{
+    const head = "รหัส,ชื่อ,ชื่อวิทยาศาสตร์,ประเภท,บริเวณ,ความสูง(ม.),เส้นรอบวง(ซม.),DBH(ซม.),CO2(กก.),สุขภาพ,ผู้สำรวจ,หมายเหตุ";
+    const rows = trees.map(t=>[t.code,t.name,t.sci,t.type,t.zone,t.height,t.girth,dbh(t.girth).toFixed(1),co2(t.girth,t.height).toFixed(1),HEALTH_TH[t.health],t.surveyor,(t.note||"").replace(/,/g,"；")].join(","));
+    const blob = new Blob(["\uFEFF"+head+"\n"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ฐานข้อมูลต้นไม้_ท่าม่วง.csv"; a.click();
+  };
+}
+
+/* ===== ควบคุมตัวกรองค้นหาเบื้องต้น ===== */
+["searchBox","filterType","filterHealth"].forEach(id=>{
+  const el = document.getElementById(id); if(el) el.addEventListener("input", renderTrees);
+});
+if (document.getElementById("btnReset")) {
+  document.getElementById("btnReset").onclick = ()=>{
+    document.getElementById("searchBox").value = ""; 
+    document.getElementById("filterType").selectedIndex = 0; 
+    document.getElementById("filterHealth").selectedIndex = 0; 
+    renderTrees();
+  };
+}
+
+// เริ่มโหลดแผ่นการ์ดข้อมูลจากคลาวด์ครั้งแรก
+window.addEventListener("DOMContentLoaded", loadTreeData);

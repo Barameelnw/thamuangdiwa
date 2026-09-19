@@ -43,7 +43,6 @@ function loadTreeData() {
           const treeName = item["ชื่อต้นไม้(ไทย) *"] || "ไม่ระบุชื่อ";
 
           return {
-            // ให้การ์ดหน้าเว็บแสดงรหัสตามข้อมูลลำดับแถวพรีวิว
             code: `TMR-${String(index + 1).padStart(3, "0")}`, 
             name: treeName,
             sci: item["ชื่อวิทยาศาสตร์"] || "-",
@@ -163,7 +162,6 @@ const fileInput = document.getElementById("fileInput");
 const uploadBox = document.getElementById("uploadBox");
 
 if (form) {
-  // คำนวณค่า DBH และคาร์บอนแบบพิมพ์ไปขึ้นโชว์ไปอัตโนมัติ
   form.addEventListener("input", ()=>{
     const g = +form.girth.value, h = +form.height.value;
     if(g>0 && h>0){
@@ -178,27 +176,22 @@ if (form) {
   });
 }
 
-// 💡 ผูกเหตุการณ์กดที่กล่องให้อ้างอิงไปเรียกคลิกเปิด fileInput หน้าต่างบราวเซอร์จริง
 uploadBox?.addEventListener("click", () => {
   if (fileInput) fileInput.click();
 });
 
-// ✨ ระบบดึงรูปขึ้นพรีวิวตามคลาสแผ่นการ์ด (.preview-item) ใน CSS ของคุณ
 fileInput?.addEventListener("change", () => {
   const previewContainer = document.getElementById("previewContainer");
   if (!previewContainer) return;
   
-  previewContainer.innerHTML = ""; // ล้างค่ารูปเก่าออกก่อนเมื่อเลือกไฟล์ใหม่
+  previewContainer.innerHTML = ""; 
 
   if (fileInput.files && fileInput.files.length > 0) {
-    const file = fileInput.files[0]; // 💡 ดึงรูปภาพใบแรกสุดที่ถูกต้องมาประมวลผล
-    
-    // แปลงขนาดไฟล์ภาพดิบจริงให้แสดงหน่วยเป็น Megabytes (MB)
+    const file = fileInput.files[0]; 
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     
     const reader = new FileReader();
     reader.onload = function(e) {
-      // วาดภาพลงล็อกตามโครงสร้างคลาส (.preview-item) ใน CSS ของคุณ พร้อมแจ้งสเปกขนาดรูปใต้กล่อง
       previewContainer.innerHTML = `
         <div style="width: 100%;">
           <div class="preview-item">
@@ -217,7 +210,6 @@ fileInput?.addEventListener("change", () => {
   }
 });
 
-// ฟังก์ชันสำหรับปุ่มกากบาท (✕) บนตัวรูปพรีวิวเพื่อล้างรูปที่เลือกทิ้ง
 function clearSelectedImage() {
   if(fileInput) fileInput.value = ""; 
   const previewContainer = document.getElementById("previewContainer");
@@ -244,7 +236,6 @@ form?.addEventListener("submit", async function(e) {
   const dbhText = document.getElementById("cDbh").textContent.replace(" ซม.", "").trim();
   const co2Text = document.getElementById("cCo2").textContent.replace(" กก.", "").trim();
 
-  // ตรวจสอบเช็กไฟล์รูปภาพจากอินพุตหน้าจอ
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
     alert("❌ กรุณาเลือกรูปภาพต้นไม้ก่อนกดบันทึกข้อมูลด้วยครับสหาย!");
     submitBtn.disabled = false; 
@@ -252,9 +243,8 @@ form?.addEventListener("submit", async function(e) {
     return;
   }
 
-  // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
   const reader = new FileReader();
-  reader.readAsDataURL(fileInput.files[0]); // 💡 ล็อกการดึงข้อมูลรูปภาพแรกให้สอดคล้องกันเป๊ะๆ
+  reader.readAsDataURL(fileInput.files[0]); 
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
@@ -275,12 +265,9 @@ form?.addEventListener("submit", async function(e) {
       ctx.drawImage(img, 0, 0, width, height);
 
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-      
-      // 💡 จุดแกะข้อความ Base64 บริสุทธิ์ลำดับที่ 1 ไร้ metadata ป้องกันบั๊ก Exception สตริง
       const base64Parts = compressedBase64.split(",");
-      const pureBase64Text = base64Parts[1];
+      const pureBase64Text = base64Parts[1]; // ล็อกดึงตัวหนังสือสตริงแท้ 100%
 
-      // ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
         treeName: f.get("name") || "",
         scienceName: f.get("sci") || "-",

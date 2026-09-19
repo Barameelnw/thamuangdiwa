@@ -254,8 +254,9 @@ form?.addEventListener("submit", async function(e) {
   }
 
   // --- เริ่มกระบวนการย่อสเกลรูปภาพจากกล้องถ่ายมือถือลดขนาดไฟล์ ---
+   
   const reader = new FileReader();
-  reader.readAsDataURL(fileInput.files[0]); // 💡 ปรับการส่งดึงข้อมูลรูปแรกให้สอดคล้องกัน
+  reader.readAsDataURL(fileInput.files[0]); // 💡 ล็อกดึงข้อมูลไฟล์ภาพใบแรกเข้ากระบวนการอ่านค่าอย่างถูกต้อง
   reader.onload = function (event) {
     const img = new Image();
     img.src = event.target.result;
@@ -277,11 +278,11 @@ form?.addEventListener("submit", async function(e) {
 
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
       
-      // 💡 จุดแกะเอาข้อความ Base64 แท้ ๆ ตำแหน่ง [1] เพื่อป้องกันบั๊กวัตถุ Blob
-      const base64String = compressedBase64.split(",")[1]; 
+      // 💡 จุดสำคัญที่สุดในการแก้บั๊กถอดรหัสสตริง:
+      // ดึงข้อความรหัสรูปภาพบริสุทธิ์ลำดับที่ 1 แปลงเป็นข้อความ String ธรรมดาให้ชัวร์ๆ ก่อนส่ง
+      const pureBase64Text = String(compressedBase64.split(",")[1]); 
 
-      // ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้าน
-            // 💡 ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
+      // ผูก Payload ห่อข้อมูลนำส่งแยก 14 ตัวแปรเข้าหลังบ้านให้ตรงแถวตารางพอดีเป๊ะ
       const payload = {
         treeName: f.get("name") || "",
         scienceName: f.get("sci") || "-",
@@ -294,14 +295,9 @@ form?.addEventListener("submit", async function(e) {
         treeHealth: selectedHealth,
         coordinator: f.get("surveyor") || "",
         note: f.get("note") || "-",
-        
-        // ❌ ของเดิม: imageBase64: base64String,
-        //  ของใหม่ที่แก้ไข (เติม [1] ข้างหลังเพื่อดึงรหัสตัวหนังสือแท้ๆ ไปแก้บั๊ก Blob):
-        imageBase64: base64String[1], 
-        
+        imageBase64: pureBase64Text, // 💡 ส่งค่าข้อความตัวหนังสือล้วนๆ ไปให้หลังบ้านแกะได้ง่ายๆ
         imageType: "image/jpeg"
       };
-
 
       try {
         const response = await fetch(GAS_WEB_APP_URL, {
@@ -330,7 +326,6 @@ form?.addEventListener("submit", async function(e) {
       }
     };
   };
-});
 
 /* ===== ส่งออก CSV ===== */
 if (document.getElementById("btnExport")) {

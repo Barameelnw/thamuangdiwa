@@ -218,6 +218,90 @@ renderPreview();
   });
 }
 
+// เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRjWGOHbGlt_aqp8o_ewkzl2bEgvL5t7HBivDvmvOJhNO_78Ktvwk0gZiiECQjCgRq/exec";
+
+async function submitForm() {
+  // เปลี่ยนปุ่มเป็นสถานะกำลังบันทึก
+  const btn = document.querySelector("#treeForm button") || document.querySelector(".btn-submit"); 
+  if(btn) btn.innerText = "⏳ กำลังบันทึก...";
+
+  const note = document.getElementById("note").value || "";
+  
+  // ใช้ .innerText หรือ .value ดูให้ตรงกับแท็กใน HTML ของคุณนะครับ (จากรูปน่าจะเป็นข้อความครอบแท็กธรรมดาใช้ innerText)
+  const dbh = document.getElementById("dbh").innerText.replace(" ซม.", "").trim();
+  const biomass = document.getElementById("biomass").innerText.replace(" กก.", "").trim();
+  const co2 = document.getElementById("co2").innerText.replace(" กก.", "").trim();
+  
+  const fileInput = document.getElementById("imageFile"); // ID ของช่องอัปโหลดรูปภาพ
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert("กรุณาเลือกรูปภาพก่อนบันทึก!");
+    if(btn) btn.innerText = "บันทึกข้อมูลต้นไม้";
+    return;
+  }
+
+  // --- เริ่มกระบวนการบีบอัดภาพเพื่อความเร็วสูงสุด ---
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = function (event) {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = async function () {
+      const canvas = document.createElement("canvas");
+      const MAX_WIDTH = 1000; // กำหนดความกว้างสูงสุดไม่เกิน 1000px เพื่อย่อขนาดไฟล์
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height *= MAX_WIDTH / width;
+        width = MAX_WIDTH;
+      }
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // บีบอัดคุณภาพรูปเหลือ 75% (ภาพยังชัด แต่ไฟล์จะเล็กลงมาก)
+      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
+      const base64String = compressedBase64.split(",")[1]; // ดึงเฉพาะตัว Base64 บริสุทธิ์
+
+      // จับคู่ก้อนข้อมูลแบบ JSON Object เพื่อส่งไปคุยกับข้อมูลหลังบ้านให้เป๊ะ
+      const payload = {
+        note: note,
+        dbh: dbh,
+        biomass: biomass,
+        co2: co2,
+        imageBase64: base64String,
+        imageType: "image/jpeg"
+      };
+
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          alert("บันทึกข้อมูลสำเร็จ!");
+          location.reload(); // รีเฟรชเคลียร์ฟอร์มเมื่อสำเร็จ
+        } else {
+          alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("การเชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        if(btn) btn.innerText = "บันทึกข้อมูลต้นไม้";
+      }
+    };
+  };
+}
+
 /* ===== ส่งออก CSV ===== */
 if (document.getElementById("btnExport")) {
   document.getElementById("btnExport").onclick = ()=>{
@@ -238,114 +322,3 @@ if (document.getElementById("btnReset")) {
   };
 }
 
-/* ============ ระบบอัปโหลดรูปภาพ ============ */
-let treeImages = [];
-const fileInput = document.getElementById('fileInput');
-const uploadBox = document.getElementById('uploadBox');
-const previewContainer = document.getElementById('previewContainer');
-
-if (uploadBox) {
-  uploadBox.addEventListener('click', () => fileInput.click());
-  ['dragover','dragleave','drop'].forEach(ev =>
-    uploadBox.addEventListener(ev, e => {
-      e.preventDefault();
-      uploadBox.classList.toggle('dragover', ev === 'dragover');
-      if (ev === 'drop') handleFiles(e.dataTransfer.files);
-    })
-  );
-  fileInput.addEventListener('change', e => handleFiles(e.target.files));
-}
-
-function handleFiles(files){
-  [...files].forEach(file => {
-    if (!file.type.startsWith('image/')) return;
-    resizeImage(file, 400, 0.4).then(url => { treeImages.push(url); renderPreview(); });
-  });
-  fileInput.value = '';
-}
-
-function resizeImage(file, maxSize, quality){
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = img.width * scale; c.height = img.height * scale;
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', quality));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function renderPreview(){
-  previewContainer.innerHTML = treeImages.map((src, i) => `
-    <div class="preview-item">
-      <img src="${src}" alt="รูปต้นไม้ ${i+1}">
-      <button type="button" onclick="removeImage(${i})">×</button>
-    </div>`).join('');
-}
-
-function removeImage(i){ treeImages.splice(i, 1); renderPreview(); }
-
-// เริ่มต้นระบบดึงข้อมูลทันทีเมื่อเปิดหน้าเว็บ
-document.addEventListener("DOMContentLoaded", loadTreeData);
-// เปลี่ยน URL ตรงนี้เป็นลิงก์ Web App URL ที่ได้จากขั้นตอน Deploy ใน Google Sheets
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRjWGOHbGlt_aqp8o_ewkzl2bEgvL5t7HBivDvmvOJhNO_78Ktvwk0gZiiECQjCgRq/exec";
-
-async function submitForm() {
-  const note = document.getElementById("note").value; // ดึงค่าจากฟิลด์ บันทึกเพิ่มเติม
-  const dbh = document.getElementById("dbh").innerText; // ดึงค่า DBH
-  const biomass = document.getElementById("biomass").innerText; // ดึงค่ามวลชีวภาพ
-  const co2 = document.getElementById("co2").innerText; // ดึงค่า CO2
-  
-  const fileInput = document.getElementById("imageFile"); // สมมติว่าตั้ง id ช่องอัปโหลดว่า imageFile
-  const file = fileInput.files[0];
-  
-  if (!file) {
-    alert("กรุณาเลือกรูปภาพก่อนบันทึก!");
-    return;
-  }
-
-  // แปลงรูปภาพเป็น Base64
-  const reader = new FileReader();
-  reader.readAsDataURL(file);
-  reader.onload = async function () {
-    const base64String = reader.result.split(",")[1]; // ตัดส่วนหัว metadata ออก เอาเฉพาะข้อมูล Base64
-    const fileType = file.type; // เก็บประเภทไฟล์ เช่น image/png
-
-    // เตรียมก้อนข้อมูลที่จะส่ง
-    const payload = {
-      note: note,
-      dbh: dbh,
-      biomass: biomass,
-      co2: co2,
-      imageBase64: base64String,
-      imageType: fileType
-    };
-
-    try {
-      // ส่งข้อมูลไปยัง Google Sheets Web App (API)
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      
-      const result = await response.json();
-      
-      if (result.status === "success") {
-        alert("บันทึกข้อมูลต้นไม้เรียบร้อยแล้ว!");
-        // โค้ดสำหรับเคลียร์ฟอร์ม หรือรีเซ็ตหน้าจอของคุณต่อตรงนี้...
-      } else {
-        alert("เกิดข้อผิดพลาด: " + result.message);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("ไม่สามารถเชื่อมต่อกับ Server ได้");
-    }
-  };
-}
